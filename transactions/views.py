@@ -8,6 +8,8 @@ from rest_framework.response import Response
 
 # *** This will be highly relevant ***
 # https://docs.djangoproject.com/en/3.1/topics/db/queries/
+from transactions.models import FBATransaction
+
 
 class TransactionsListView(GenericAPIView):
     """
@@ -31,8 +33,23 @@ class TransactionsListView(GenericAPIView):
         """
         # Dictionary containing all parameters sent in the query string
         request_data = request.GET
+        query = FBATransaction.objects.all()
 
-        return Response("ok", status=status.HTTP_200_OK)
+        order_type = request_data.get('type')
+        if order_type:
+            query = FBATransaction.objects.filter(order_type=order_type)
+
+        city = request_data.get('city')
+        if city:
+            query = FBATransaction.objects.filter(order_city=city)
+
+        state = request_data.get('state')
+        if state:
+            query = FBATransaction.objects.filter(order_state=state)
+
+
+        foo = query.values()
+        return Response(foo, status=status.HTTP_200_OK)
 
     @csrf_exempt
     def post(self, request: HttpRequest):

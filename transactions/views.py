@@ -1,3 +1,5 @@
+import datetime
+
 from django.http import HttpRequest
 from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
@@ -88,6 +90,31 @@ class TransactionsListView(GenericAPIView):
         for _, file in request.FILES.items():
             pass
 
+        # boo this part fills me with shame but I wanted to force a way to submit the data when
+        # I entered into a layer of hell trying to untangle uploading a file
+        for curr_row in request.data:
+            curr_date = curr_row.get('date/time')
+            if  curr_date:
+                curr_date = curr_date.replace(', ', ' ')
+                curr_date = curr_date.replace(' PDT', ' -0900')
+                curr_date = curr_date.replace(' PST', ' -0800')
+                dt = datetime.datetime.strptime(curr_date, '%b %d %Y %I:%M:%S %p %z')
+            else:
+                continue
+
+            entry_orm = FBATransaction(
+                date_time=dt,
+                order_type=curr_row.get('type'),
+                order_id=curr_row.get('order id'),
+                sku=curr_row.get('sku'),
+                description=curr_row.get('description'),
+                quantity=int(curr_row.get('quantity')) if curr_row.get('quantity') else None,
+                order_city=curr_row.get('order city'),
+                order_state=curr_row.get('order state'),
+                order_postal=curr_row.get('order postal'),
+                total=float(curr_row.get('total')) if curr_row.get('total') else None,
+            )
+            entry_orm.save()
         return Response("ok", status=status.HTTP_200_OK)
 
 

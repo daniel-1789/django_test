@@ -16,6 +16,16 @@ from transactions.models import FBATransaction
 
 
 def convert_string_to_datetime(date_string: str):
+    """
+    Given a date_string with a format like Nov 1, 2020 12:23:30 AM PDT, convert it to a datetime.
+    This code takes advantage of the sample data only having PDT and PST, obviously in a production
+    design that would not be sufficient
+
+    params:
+    date_string(str): The string to be converted into a datetime expected format Nov 1, 2020 12:23:30 AM PDT
+
+    return: Python datetime object
+    """
     date_string = date_string.replace(', ', ' ')
     date_string = date_string.replace(' PDT', ' -0900')
     date_string = date_string.replace(' PST', ' -0800')
@@ -24,6 +34,15 @@ def convert_string_to_datetime(date_string: str):
 
 
 def do_filtering(query_dict: Dict):
+    """
+    Go through the query_dict and perform any of the queries that are specified in it.
+    Take advantage of the lazy query characteristic of django and build the query iteratively
+
+    params:
+    query_dict(dict): Dictionary of filters apply
+
+    return: Query result
+    """
 
     query = FBATransaction.objects.all()
 
@@ -92,14 +111,24 @@ class TransactionsListView(GenericAPIView):
     def post(self, request: HttpRequest):
         """
         Imports a CSV file of transactions
+
+        NOTE - This POST caused me an inordinate amount of pain. I've never used Django before this'
+        and I'm certain that there's something really obvious I missed to allow me to upload a CSV.
+        However, whenever I tried to do so I ran into problems with text/csv - I kept running into
+        problems with rendering the csv as opposed to a json. I experimented a little bit with
+        using https://github.com/mjumbewu/django-rest-framework-csv but that didn't quite work though
+        I think I was on the right track. However since this was described as intended to a relatively
+        brief exercise I felt I'd well exceeded a reasonable amount of time searching for a solution.
+        Were I in the office I'd probably be posting a slack along the lines of "what one line
+        fix am I missing or where can I find this in stack overflow..."
+
+        That said I did want to have some mechanism to take the data and insert it in the database
+        so I went with the extremely brute-force method of changing this to accept a massive json blob
+        that I converted from the sample csv file
         """
 
         # https://docs.djangoproject.com/en/3.1/ref/request-response/#django.http.HttpRequest.FILES
-        for _, file in request.FILES.items():
-            pass
 
-        # boo this part fills me with shame but I wanted to force a way to submit the data when
-        # I entered into a layer of hell trying to untangle uploading a file
         for curr_row in request.data:
             curr_date = curr_row.get('date/time')
             if  curr_date:
@@ -125,7 +154,10 @@ class TransactionsListView(GenericAPIView):
 
 class TransactionsStatsView(GenericAPIView):
     """
-    Returns aggregated stats of transactions by the given filters
+    Returns aggregated stats of transactions by the given filters,
+
+    Note - the specifications did not indicate what was to be done in the event of no matches, returning
+    a dict of Nones in such a case
     """
 
     permission_classes = (AllowAny,)
@@ -149,9 +181,17 @@ class TransactionsStatsView(GenericAPIView):
         for curr_entry in query_result:
             print(curr_entry)
         totals = [curr_entry.get('total') for curr_entry in query_result]
-        stats = {
-            'summed': sum(totals),
-            'mean':  mean(totals),
-            'median': median(totals),
-        }
+        if totals:
+            stats = {
+                'summed': sum(totals),
+                'mean':  mean(totals),
+                'median': median(totals),
+            }
+        else:
+            stats = {
+                'summed': None,
+                'mean':  None,
+                'median': None,
+            }
+
         return Response(stats, status=status.HTTP_200_OK)

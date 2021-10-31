@@ -15,6 +15,14 @@ from statistics import mean,median
 from transactions.models import FBATransaction
 
 
+def convert_string_to_datetime(date_string: str):
+    date_string = date_string.replace(', ', ' ')
+    date_string = date_string.replace(' PDT', ' -0900')
+    date_string = date_string.replace(' PST', ' -0800')
+    dt = datetime.datetime.strptime(date_string, '%b %d %Y %I:%M:%S %p %z')
+    return dt
+
+
 def do_filtering(query_dict: Dict):
 
     query = FBATransaction.objects.all()
@@ -42,12 +50,12 @@ def do_filtering(query_dict: Dict):
 
     start_date = query_dict.get('start')
     if start_date:
-        parsed_start = parse_date(start_date)
+        parsed_start = convert_string_to_datetime(start_date)
         query = query.filter(date_time__gte=parsed_start)
 
     end_date = query_dict.get('end')
     if end_date:
-        parsed_end = parse_date(end_date)
+        parsed_end = convert_string_to_datetime(end_date)
         query = query.filter(date_time__lte=parsed_end)
 
     return query.values()
@@ -95,10 +103,7 @@ class TransactionsListView(GenericAPIView):
         for curr_row in request.data:
             curr_date = curr_row.get('date/time')
             if  curr_date:
-                curr_date = curr_date.replace(', ', ' ')
-                curr_date = curr_date.replace(' PDT', ' -0900')
-                curr_date = curr_date.replace(' PST', ' -0800')
-                dt = datetime.datetime.strptime(curr_date, '%b %d %Y %I:%M:%S %p %z')
+                dt = convert_string_to_datetime(curr_date)
             else:
                 continue
 

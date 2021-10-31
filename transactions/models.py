@@ -12,7 +12,7 @@ class FBATransaction(models.Model):
     class Meta:
         db_table = "fba_transactions"
 
-    date_time = models.DateTimeField(null=False, blank=False, db_column='date/time')  # never null
+    date_time = models.DateTimeField(null=False, blank=False, db_column='date_time')  # never null
 
     # order types
     ADJUSTMENT = 'Adjustment'

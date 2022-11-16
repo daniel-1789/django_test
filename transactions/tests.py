@@ -95,12 +95,6 @@ class Transactions(TestCase):
         for row in data:
             assert row.get('sku') in {'tie-bomber'}
 
-        self.add_x_wing()
-        resp = c.get('/api/transactions/?type=Order')
-        data = resp.data
-        for row in data:
-            assert row.get('sku') in {'tie-bomber', 'x-wing'}
-
 
     def test_get_stats(self):
         c = Client(HTTP_USER_AGENT='Mozilla/5.0')
